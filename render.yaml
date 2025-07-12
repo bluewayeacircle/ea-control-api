@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: ea-control-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    
