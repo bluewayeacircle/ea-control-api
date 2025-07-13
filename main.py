@@ -1,33 +1,55 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # ✅ Enable CORS for all routes
 
+# Default EA settings
+app.config['EA_RUNNING'] = True
+app.config['EA_MODE'] = "NORMAL"  # Options: "NORMAL", "AGGRESSIVE"
 
-# Global state
-ea_status = {
-    "is_running": True,
-    "mode": "NORMAL"
-}
+@app.route('/')
+def home():
+    return "EA Control API is live!"
 
-@app.route("/status", methods=["GET"])
+@app.route('/status', methods=['GET'])
 def get_status():
-    return jsonify(ea_status)
+    return jsonify({
+        "is_running": app.config['EA_RUNNING'],
+        "mode": app.config['EA_MODE']
+    })
 
-@app.route("/status", methods=["POST"])
+@app.route('/status', methods=['POST'])
 def set_status():
-    data = request.get_json()
-    if "is_running" in data:
-        ea_status["is_running"] = bool(data["is_running"])
-    return jsonify(ea_status)
+    if not request.is_json:
+        return jsonify({"error": "Expected JSON with Content-Type: application/json"}), 415
 
-@app.route("/mode", methods=["POST"])
+    data = request.get_json()
+    is_running = data.get('is_running')
+
+    if is_running is None:
+        return jsonify({"error": "Missing 'is_running' key"}), 400
+
+    app.config['EA_RUNNING'] = bool(is_running)
+    return jsonify({
+        "is_running": app.config['EA_RUNNING'],
+        "mode": app.config.get("EA_MODE", "NORMAL")
+    })
+
+@app.route('/mode', methods=['POST'])
 def set_mode():
-    data = request.get_json()
-    if "mode" in data and data["mode"] in ["NORMAL", "AGGRESSIVE"]:
-        ea_status["mode"] = data["mode"]
-    return jsonify(ea_status)
+    if not request.is_json:
+        return jsonify({"error": "Expected JSON with Content-Type: application/json"}), 415
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    data = request.get_json()
+    mode = data.get('mode')
+
+    if mode not in ['NORMAL', 'AGGRESSIVE']:
+        return jsonify({"error": "Invalid mode, use 'NORMAL' or 'AGGRESSIVE'"}), 400
+
+    app.config['EA_MODE'] = mode
+    return jsonify({
+        "is_running": app.config.get("EA_RUNNING", False),
+        "mode": app.config['EA_MODE']
+    })
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
